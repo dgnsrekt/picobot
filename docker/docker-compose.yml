@@ -1,25 +1,40 @@
 services:
-  picobot:
+  picobot-minimax:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: picobot
+    container_name: picobot-minimax
     restart: unless-stopped
+    labels:
+      - "picobot.model=minimax/minimax-m2.5"
+      - "picobot.telegram=@fdd_venkalth_pickerin_bot"
     environment:
-      # Required: OpenAI-compatible API key (works with OpenRouter, OpenAI, etc.)
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-or-v1-REPLACE_ME}
-      # Optional: OpenAI-compatible API base URL
       - OPENAI_API_BASE=${OPENAI_API_BASE:-https://openrouter.ai/api/v1}
-      # Required: The LLM model to use
-      - PICOBOT_MODEL=${PICOBOT_MODEL:-google/gemini-2.5-flash}
-      # Optional: Telegram bot token from @BotFather
+      - PICOBOT_MODEL=minimax/minimax-m2.5
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
-      # Optional: Comma-separated Telegram user IDs allowed to chat
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
-      # Optional: Discord bot token from Developer Portal
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
-      # Optional: Comma-separated Discord user IDs allowed to chat
       - DISCORD_ALLOW_FROM=${DISCORD_ALLOW_FROM:-}
     volumes:
-      # Persist config, workspace, memory, skills, and WhatsApp session DB
-      - ./picobot-data:/home/picobot/.picobot
+      - ./picobot-data-minimax:/home/picobot/.picobot
+
+  picobot-qwen:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: picobot-qwen
+    restart: unless-stopped
+    labels:
+      - "picobot.model=qwen/qwen3-next-80b"
+      - "picobot.telegram=@fdd_shadow_morelli_bot"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-or-v1-REPLACE_ME}
+      - OPENAI_API_BASE=${OPENAI_API_BASE:-https://openrouter.ai/api/v1}
+      - PICOBOT_MODEL=qwen/qwen3-next-80b
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN_TWO:-}
+      - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      - DISCORD_ALLOW_FROM=${DISCORD_ALLOW_FROM:-}
+    volumes:
+      - ./picobot-data-qwen:/home/picobot/.picobot
