@@ -291,6 +291,12 @@ func (a *AgentLoop) ProcessDirect(content string, timeout time.Duration) (string
 	return "Max iterations reached without final response", nil
 }
 
+// RegisterTool adds a tool to the agent's registry after construction.
+// Used by shadow integrations (e.g. MCP servers) to extend built-in tools.
+func (a *AgentLoop) RegisterTool(t tools.Tool) {
+	a.tools.Register(t)
+}
+
 // truncateForLog shortens s to n bytes for log output, appending "..." if truncated.
 func truncateForLog(s string, n int) string {
 	s = strings.TrimSpace(s)

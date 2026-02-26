@@ -23,6 +23,7 @@ import (
 	"github.com/local/picobot/internal/config"
 	"github.com/local/picobot/internal/cron"
 	"github.com/local/picobot/internal/heartbeat"
+	"github.com/local/picobot/internal/mcpbridge"
 	"github.com/local/picobot/internal/providers"
 )
 
@@ -142,6 +143,24 @@ func NewRootCmd() *cobra.Command {
 			}
 			ag := agent.NewAgentLoop(hub, provider, model, maxIter, cfg.Agents.Defaults.Workspace, nil)
 
+			if home, err := os.UserHomeDir(); err == nil {
+				picobotDir := filepath.Join(home, ".picobot")
+				if mcpCfg, err := mcpbridge.LoadMCPConfig(picobotDir); err != nil {
+					log.Printf("mcp: config error: %v", err)
+				} else if mcpCfg != nil {
+					mcpCtx := context.Background()
+					if mcpTools, closeMCP, err := mcpbridge.LoadTools(mcpCtx, mcpCfg); err != nil {
+						log.Printf("mcp: load failed: %v", err)
+					} else {
+						defer closeMCP()
+						for _, t := range mcpTools {
+							ag.RegisterTool(t)
+						}
+						log.Printf("mcp: loaded %d tools from %d servers", len(mcpTools), len(mcpCfg.Servers))
+					}
+				}
+			}
+
 			resp, err := ag.ProcessDirect(msg, 60*time.Second)
 			if err != nil {
 				fmt.Fprintln(cmd.ErrOrStderr(), "error:", err)
@@ -190,6 +209,23 @@ func NewRootCmd() *cobra.Command {
 			ag := agent.NewAgentLoop(hub, provider, model, maxIter, cfg.Agents.Defaults.Workspace, scheduler)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
+
+			if home, err := os.UserHomeDir(); err == nil {
+				picobotDir := filepath.Join(home, ".picobot")
+				if mcpCfg, err := mcpbridge.LoadMCPConfig(picobotDir); err != nil {
+					log.Printf("mcp: config error: %v", err)
+				} else if mcpCfg != nil {
+					if mcpTools, closeMCP, err := mcpbridge.LoadTools(ctx, mcpCfg); err != nil {
+						log.Printf("mcp: load failed: %v", err)
+					} else {
+						defer closeMCP()
+						for _, t := range mcpTools {
+							ag.RegisterTool(t)
+						}
+						log.Printf("mcp: loaded %d tools from %d servers", len(mcpTools), len(mcpCfg.Servers))
+					}
+				}
+			}
 
 			// start agent loop
 			go ag.Run(ctx)
