@@ -17,6 +17,7 @@ type AgentDefaults struct {
 	MaxTokens          int     `json:"maxTokens"`
 	Temperature        float64 `json:"temperature"`
 	MaxToolIterations  int     `json:"maxToolIterations"`
+	HeartbeatEnabled   *bool   `json:"heartbeatEnabled,omitempty"`
 	HeartbeatIntervalS int     `json:"heartbeatIntervalS"`
 	RequestTimeoutS    int     `json:"requestTimeoutS"`
 }

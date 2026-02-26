@@ -12,6 +12,7 @@ import (
 
 // DefaultConfig returns a minimal default Config with sensible defaults.
 func DefaultConfig() Config {
+	hbEnabled := true
 	return Config{
 		Agents: AgentsConfig{Defaults: AgentDefaults{
 			Workspace:          "~/.picobot/workspace",
@@ -19,6 +20,7 @@ func DefaultConfig() Config {
 			MaxTokens:          8192,
 			Temperature:        0.7,
 			MaxToolIterations:  100,
+			HeartbeatEnabled:   &hbEnabled,
 			HeartbeatIntervalS: 60,
 			RequestTimeoutS:    60,
 		}},

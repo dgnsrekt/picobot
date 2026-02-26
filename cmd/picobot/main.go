@@ -266,11 +266,13 @@ func NewRootCmd() *cobra.Command {
 			go scheduler.Start(ctx.Done())
 
 			// start heartbeat
-			hbInterval := time.Duration(cfg.Agents.Defaults.HeartbeatIntervalS) * time.Second
-			if hbInterval <= 0 {
-				hbInterval = 60 * time.Second
+			if cfg.Agents.Defaults.HeartbeatEnabled == nil || *cfg.Agents.Defaults.HeartbeatEnabled {
+				hbInterval := time.Duration(cfg.Agents.Defaults.HeartbeatIntervalS) * time.Second
+				if hbInterval <= 0 {
+					hbInterval = 60 * time.Second
+				}
+				heartbeat.StartHeartbeat(ctx, cfg.Agents.Defaults.Workspace, hbInterval, hub)
 			}
-			heartbeat.StartHeartbeat(ctx, cfg.Agents.Defaults.Workspace, hbInterval, hub)
 
 			// start telegram if enabled
 			if cfg.Channels.Telegram.Enabled {
