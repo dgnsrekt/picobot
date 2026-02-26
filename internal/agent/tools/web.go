@@ -3,9 +3,11 @@ package tools
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
+
+const maxWebBodyBytes = 512 * 1024 // 512 KB
 
 // WebTool supports fetch operations.
 // Args: {"url": "https://..."}
@@ -44,7 +46,7 @@ func (t *WebTool) Execute(ctx context.Context, args map[string]interface{}) (str
 		return "", err
 	}
 	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(io.LimitReader(resp.Body, maxWebBodyBytes))
 	if err != nil {
 		return "", err
 	}
