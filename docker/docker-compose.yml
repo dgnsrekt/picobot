@@ -6,7 +6,7 @@ services:
     container_name: picobot-qwen
     restart: unless-stopped
     labels:
-      - "picobot.model=qwen/qwen3-next-80b:2"
+      - "picobot.model=qwen/qwen3-next-80b:shadow-morelli"
       - "picobot.telegram=@fdd_shadow_morelli_bot"
     ports:
       - "8081:8080"
@@ -14,7 +14,7 @@ services:
       - HOME=/home/picobot
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-or-v1-REPLACE_ME}
       - OPENAI_API_BASE=${OPENAI_API_BASE:-https://openrouter.ai/api/v1}
-      - PICOBOT_MODEL=qwen/qwen3-next-80b:2
+      - PICOBOT_MODEL=qwen/qwen3-next-80b:shadow-morelli
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN_TWO:-}
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
