@@ -182,9 +182,13 @@ func (a *AgentLoop) Run(ctx context.Context) {
 					messages = append(messages, providers.Message{Role: "assistant", Content: resp.Content, ToolCalls: resp.ToolCalls})
 					// Execute each tool call and return results with "tool" role
 					for _, tc := range resp.ToolCalls {
+						log.Printf("tool call: %s args=%v", tc.Name, tc.Arguments)
 						res, err := a.tools.Execute(ctx, tc.Name, tc.Arguments)
 						if err != nil {
+							log.Printf("tool error: %s -> %v", tc.Name, err)
 							res = "(tool error) " + err.Error()
+						} else {
+							log.Printf("tool result: %s -> %s", tc.Name, truncateForLog(res, 200))
 						}
 						lastToolResult = res
 						messages = append(messages, providers.Message{Role: "tool", Content: res, ToolCallID: tc.ID})
@@ -271,9 +275,13 @@ func (a *AgentLoop) ProcessDirect(content string, timeout time.Duration) (string
 		// Execute tool calls
 		messages = append(messages, providers.Message{Role: "assistant", Content: resp.Content, ToolCalls: resp.ToolCalls})
 		for _, tc := range resp.ToolCalls {
+			log.Printf("tool call: %s args=%v", tc.Name, tc.Arguments)
 			result, err := a.tools.Execute(ctx, tc.Name, tc.Arguments)
 			if err != nil {
+				log.Printf("tool error: %s -> %v", tc.Name, err)
 				result = "(tool error) " + err.Error()
+			} else {
+				log.Printf("tool result: %s -> %s", tc.Name, truncateForLog(result, 200))
 			}
 			lastToolResult = result
 			messages = append(messages, providers.Message{Role: "tool", Content: result, ToolCallID: tc.ID})
@@ -281,4 +289,13 @@ func (a *AgentLoop) ProcessDirect(content string, timeout time.Duration) (string
 	}
 
 	return "Max iterations reached without final response", nil
+}
+
+// truncateForLog shortens s to n bytes for log output, appending "..." if truncated.
+func truncateForLog(s string, n int) string {
+	s = strings.TrimSpace(s)
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
 }
