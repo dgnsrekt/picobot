@@ -8,6 +8,8 @@ services:
     labels:
       - "picobot.model=minimax/minimax-m2.5"
       - "picobot.telegram=@fdd_venkalth_pickerin_bot"
+    ports:
+      - "8080:8080"
     environment:
       - HOME=/home/picobot
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-or-v1-REPLACE_ME}
@@ -36,6 +38,8 @@ services:
     labels:
       - "picobot.model=qwen/qwen3-next-80b"
       - "picobot.telegram=@fdd_shadow_morelli_bot"
+    ports:
+      - "8081:8080"
     environment:
       - HOME=/home/picobot
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-or-v1-REPLACE_ME}

@@ -16,6 +16,7 @@ import (
 
 	"log"
 
+	"github.com/local/picobot/internal/a2abridge"
 	"github.com/local/picobot/internal/agent"
 	"github.com/local/picobot/internal/agent/memory"
 	"github.com/local/picobot/internal/channels"
@@ -223,6 +224,37 @@ func NewRootCmd() *cobra.Command {
 							ag.RegisterTool(t)
 						}
 						log.Printf("mcp: loaded %d tools from %d servers", len(mcpTools), len(mcpCfg.Servers))
+					}
+				}
+			}
+
+			// a2a bridge — outbound delegation tools + optional inbound server
+			if home, err := os.UserHomeDir(); err == nil {
+				picobotDir := filepath.Join(home, ".picobot")
+				if a2aCfg, err := a2abridge.LoadA2AConfig(picobotDir); err != nil {
+					log.Printf("a2a: config error: %v", err)
+				} else if a2aCfg != nil {
+					if a2aTools, closeA2A, err := a2abridge.LoadTools(a2aCfg); err != nil {
+						log.Printf("a2a: tool load failed: %v", err)
+					} else {
+						defer closeA2A()
+						for _, t := range a2aTools {
+							ag.RegisterTool(t)
+						}
+						log.Printf("a2a: loaded %d delegation tools", len(a2aTools))
+					}
+					if a2aCfg.Serve {
+						port := a2aCfg.Port
+						if port == 0 {
+							port = 8080
+						}
+						a2aSrv := a2abridge.NewServer(hub) // Subscribe registered here, before StartRouter
+						go func() {
+							if err := a2aSrv.Start(ctx, port); err != nil {
+								log.Printf("a2a: server error: %v", err)
+							}
+						}()
+						log.Printf("a2a: inbound server starting on :%d", port)
 					}
 				}
 			}
