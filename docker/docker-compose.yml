@@ -9,6 +9,7 @@ services:
       - "picobot.model=minimax/minimax-m2.5"
       - "picobot.telegram=@fdd_venkalth_pickerin_bot"
     environment:
+      - HOME=/home/picobot
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-or-v1-REPLACE_ME}
       - OPENAI_API_BASE=${OPENAI_API_BASE:-https://openrouter.ai/api/v1}
       - PICOBOT_MODEL=minimax/minimax-m2.5
@@ -16,11 +17,12 @@ services:
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - DISCORD_ALLOW_FROM=${DISCORD_ALLOW_FROM:-}
+    user: "1000"
     group_add:
       - "970"
     volumes:
-      - ./picobot-data-minimax:/home/picobot/.picobot
-      - ${HOME}/.picobot/mcp.json:/home/picobot/.picobot/mcp.json:ro
+      - ./data-minimax:/home/picobot/.picobot
+      - ${HOME}/.picobot:/mcp-config:ro
       - /var/run/docker.sock:/var/run/docker.sock
 
   picobot-qwen:
@@ -33,6 +35,7 @@ services:
       - "picobot.model=qwen/qwen3-next-80b"
       - "picobot.telegram=@fdd_shadow_morelli_bot"
     environment:
+      - HOME=/home/picobot
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-or-v1-REPLACE_ME}
       - OPENAI_API_BASE=${OPENAI_API_BASE:-https://openrouter.ai/api/v1}
       - PICOBOT_MODEL=qwen/qwen3-next-80b
@@ -40,9 +43,10 @@ services:
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - DISCORD_ALLOW_FROM=${DISCORD_ALLOW_FROM:-}
+    user: "1000"
     group_add:
       - "970"
     volumes:
-      - ./picobot-data-qwen:/home/picobot/.picobot
-      - ${HOME}/.picobot/mcp.json:/home/picobot/.picobot/mcp.json:ro
+      - ./data-qwen:/home/picobot/.picobot
+      - ${HOME}/.picobot:/mcp-config:ro
       - /var/run/docker.sock:/var/run/docker.sock

@@ -60,5 +60,13 @@ if [ -n "${PICOBOT_MODEL}" ]; then
   jq --arg model "${PICOBOT_MODEL}" '.agents.defaults.model = $model' "${CONFIG}" > "$TMP" && mv "$TMP" "${CONFIG}"
 fi
 
+# Copy mcp.json from shared config mount if present and not already in data dir
+MCP_SRC="/mcp-config/mcp.json"
+MCP_DST="${PICOBOT_HOME}/mcp.json"
+if [ -f "${MCP_SRC}" ] && [ ! -f "${MCP_DST}" ]; then
+  echo "Copying mcp.json from ${MCP_SRC}..."
+  cp "${MCP_SRC}" "${MCP_DST}"
+fi
+
 echo "Starting picobot $@..."
 exec picobot "$@"
