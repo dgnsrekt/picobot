@@ -28,10 +28,12 @@ RUN set -eux; \
 # ---- Runtime Stage ----
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates tzdata bash curl jq
+RUN apk add --no-cache ca-certificates tzdata bash curl jq docker-cli
 
-# Create non-root user
-RUN addgroup -S picobot && adduser -S picobot -G picobot
+# Create non-root user; add to docker group (GID 970) for socket access
+RUN addgroup -S picobot && adduser -S picobot -G picobot \
+    && addgroup -g 970 docker 2>/dev/null || true \
+    && adduser picobot docker
 
 # Picobot home directory (config + workspace live here)
 ENV PICOBOT_HOME=/home/picobot/.picobot

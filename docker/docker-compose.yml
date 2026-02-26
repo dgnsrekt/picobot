@@ -16,8 +16,12 @@ services:
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - DISCORD_ALLOW_FROM=${DISCORD_ALLOW_FROM:-}
+    group_add:
+      - "970"
     volumes:
       - ./picobot-data-minimax:/home/picobot/.picobot
+      - ${HOME}/.picobot/mcp.json:/home/picobot/.picobot/mcp.json:ro
+      - /var/run/docker.sock:/var/run/docker.sock
 
   picobot-qwen:
     build:
@@ -36,5 +40,9 @@ services:
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - DISCORD_ALLOW_FROM=${DISCORD_ALLOW_FROM:-}
+    group_add:
+      - "970"
     volumes:
       - ./picobot-data-qwen:/home/picobot/.picobot
+      - ${HOME}/.picobot/mcp.json:/home/picobot/.picobot/mcp.json:ro
+      - /var/run/docker.sock:/var/run/docker.sock
