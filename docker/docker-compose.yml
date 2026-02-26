@@ -17,6 +17,7 @@ services:
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - DISCORD_ALLOW_FROM=${DISCORD_ALLOW_FROM:-}
+      - SSL_CERT_FILE=/etc/ssl/host-ca-bundle.pem
     user: "1000"
     group_add:
       - "970"
@@ -24,6 +25,7 @@ services:
       - ./data-minimax:/home/picobot/.picobot
       - ${HOME}/.picobot:/mcp-config:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/host-ca-bundle.pem:ro
 
   picobot-qwen:
     build:
@@ -43,6 +45,7 @@ services:
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - DISCORD_ALLOW_FROM=${DISCORD_ALLOW_FROM:-}
+      - SSL_CERT_FILE=/etc/ssl/host-ca-bundle.pem
     user: "1000"
     group_add:
       - "970"
@@ -50,3 +53,4 @@ services:
       - ./data-qwen:/home/picobot/.picobot
       - ${HOME}/.picobot:/mcp-config:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/host-ca-bundle.pem:ro
