@@ -112,6 +112,8 @@ func (a *AgentLoop) Run(ctx context.Context) {
 			}
 
 			log.Printf("Processing message from %s:%s\n", msg.Channel, msg.SenderID)
+			startTime := time.Now()
+			toolCallCount := 0
 
 			// Quick heuristic: if user asks the agent to remember something explicitly,
 			// store it in today's note and reply immediately without calling the LLM.
@@ -183,12 +185,13 @@ func (a *AgentLoop) Run(ctx context.Context) {
 					// Execute each tool call and return results with "tool" role
 					for _, tc := range resp.ToolCalls {
 						log.Printf("tool call: %s args=%v", tc.Name, tc.Arguments)
+						toolCallCount++
 						res, err := a.tools.Execute(ctx, tc.Name, tc.Arguments)
 						if err != nil {
 							log.Printf("tool error: %s -> %v", tc.Name, err)
 							res = "(tool error) " + err.Error()
 						} else {
-							log.Printf("tool result: %s -> %s", tc.Name, truncateForLog(res, 200))
+							log.Printf("tool result: %s (%d bytes) -> %s", tc.Name, len(res), truncateForLog(res, 200))
 						}
 						lastToolResult = res
 						messages = append(messages, providers.Message{Role: "tool", Content: res, ToolCallID: tc.ID})
@@ -222,6 +225,7 @@ func (a *AgentLoop) Run(ctx context.Context) {
 			default:
 				log.Println("Outbound channel full, dropping message")
 			}
+			log.Printf("response sent to %s:%s (%d tool calls, %.1fs)", msg.Channel, msg.SenderID, toolCallCount, time.Since(startTime).Seconds())
 		default:
 			// idle tick
 			time.Sleep(100 * time.Millisecond)
@@ -281,7 +285,7 @@ func (a *AgentLoop) ProcessDirect(content string, timeout time.Duration) (string
 				log.Printf("tool error: %s -> %v", tc.Name, err)
 				result = "(tool error) " + err.Error()
 			} else {
-				log.Printf("tool result: %s -> %s", tc.Name, truncateForLog(result, 200))
+				log.Printf("tool result: %s (%d bytes) -> %s", tc.Name, len(result), truncateForLog(result, 200))
 			}
 			lastToolResult = result
 			messages = append(messages, providers.Message{Role: "tool", Content: result, ToolCallID: tc.ID})

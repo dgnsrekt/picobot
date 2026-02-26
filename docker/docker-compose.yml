@@ -1,34 +1,4 @@
 services:
-  picobot-minimax:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-    container_name: picobot-minimax
-    restart: unless-stopped
-    labels:
-      - "picobot.model=minimax/minimax-m2.5"
-      - "picobot.telegram=@fdd_venkalth_pickerin_bot"
-    ports:
-      - "8080:8080"
-    environment:
-      - HOME=/home/picobot
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-or-v1-REPLACE_ME}
-      - OPENAI_API_BASE=${OPENAI_API_BASE:-https://openrouter.ai/api/v1}
-      - PICOBOT_MODEL=minimax/minimax-m2.5
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
-      - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
-      - DISCORD_ALLOW_FROM=${DISCORD_ALLOW_FROM:-}
-      - SSL_CERT_FILE=/etc/ssl/host-ca-bundle.pem
-    user: "1000"
-    group_add:
-      - "970"
-    volumes:
-      - ./data-minimax:/home/picobot/.picobot
-      - ${HOME}/.picobot:/mcp-config:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/host-ca-bundle.pem:ro
-
   picobot-qwen:
     build:
       context: ..
@@ -36,7 +6,7 @@ services:
     container_name: picobot-qwen
     restart: unless-stopped
     labels:
-      - "picobot.model=qwen/qwen3-next-80b"
+      - "picobot.model=qwen/qwen3-next-80b:2"
       - "picobot.telegram=@fdd_shadow_morelli_bot"
     ports:
       - "8081:8080"
@@ -44,7 +14,7 @@ services:
       - HOME=/home/picobot
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-or-v1-REPLACE_ME}
       - OPENAI_API_BASE=${OPENAI_API_BASE:-https://openrouter.ai/api/v1}
-      - PICOBOT_MODEL=qwen/qwen3-next-80b
+      - PICOBOT_MODEL=qwen/qwen3-next-80b:2
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN_TWO:-}
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}

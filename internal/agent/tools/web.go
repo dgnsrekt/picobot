@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-const maxWebBodyBytes = 512 * 1024 // 512 KB
+const maxWebBodyBytes = 100 * 1024 // 100 KB
 
 // WebTool supports fetch operations.
 // Args: {"url": "https://..."}
