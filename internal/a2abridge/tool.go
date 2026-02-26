@@ -2,8 +2,11 @@ package a2abridge
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/a2aproject/a2a-go/a2a"
@@ -14,8 +17,51 @@ import (
 // A2ATool wraps a single A2A agent and implements tools.Tool so it can be
 // registered in picobot's tool registry alongside built-in tools.
 type A2ATool struct {
-	agentName string
-	client    *a2aclient.Client
+	agentName   string
+	client      *a2aclient.Client
+	description string // populated from agent card at startup
+}
+
+// agentCard is a minimal subset of the A2A agent card JSON.
+type agentCard struct {
+	Description string       `json:"description"`
+	Skills      []agentSkill `json:"skills"`
+}
+
+type agentSkill struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// fetchAgentDescription GETs the agent card and builds a rich description
+// string from the agent's description and skill list. Returns empty string
+// on any failure so the caller can fall back to the generic description.
+func fetchAgentDescription(baseURL string) string {
+	url := strings.TrimRight(baseURL, "/") + "/.well-known/agent-card.json"
+	resp, err := http.Get(url) //nolint:noctx
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	if err != nil {
+		return ""
+	}
+	var card agentCard
+	if err := json.Unmarshal(body, &card); err != nil {
+		return ""
+	}
+	var sb strings.Builder
+	if card.Description != "" {
+		sb.WriteString(card.Description)
+	}
+	if len(card.Skills) > 0 {
+		sb.WriteString("\n\nAvailable skills:")
+		for _, s := range card.Skills {
+			sb.WriteString(fmt.Sprintf("\n- %s: %s", s.Name, s.Description))
+		}
+	}
+	return sb.String()
 }
 
 // Name returns a namespaced tool name: a2a__<agent>__delegate.
@@ -23,8 +69,12 @@ func (t *A2ATool) Name() string {
 	return fmt.Sprintf("a2a__%s__delegate", t.agentName)
 }
 
-// Description returns a human-readable description of the tool.
+// Description returns a human-readable description of the tool, populated from
+// the remote agent card if available, otherwise a generic fallback.
 func (t *A2ATool) Description() string {
+	if t.description != "" {
+		return t.description
+	}
 	return fmt.Sprintf("Delegate a task or question to the %s agent via A2A protocol.", t.agentName)
 }
 
@@ -110,8 +160,9 @@ func LoadTools(cfg *A2AConfig) ([]tools.Tool, func(), error) {
 			continue
 		}
 		clients = append(clients, client)
-		allTools = append(allTools, &A2ATool{agentName: name, client: client})
-		log.Printf("a2a: created delegation tool for agent %q at %s", name, agentCfg.URL)
+		desc := fetchAgentDescription(agentCfg.URL)
+		allTools = append(allTools, &A2ATool{agentName: name, client: client, description: desc})
+		log.Printf("a2a: created delegation tool for agent %q at %s (%d skills)", name, agentCfg.URL, strings.Count(desc, "\n- "))
 	}
 
 	cleanup := func() {
