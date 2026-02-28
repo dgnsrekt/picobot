@@ -12,7 +12,7 @@ import (
 
 // DefaultConfig returns a minimal default Config with sensible defaults.
 func DefaultConfig() Config {
-	hbEnabled := true
+	hbEnabled := false
 	return Config{
 		Agents: AgentsConfig{Defaults: AgentDefaults{
 			Workspace:          "~/.picobot/workspace",
