@@ -1,9 +1,24 @@
 services:
+  init-perms:
+    image: alpine:3.20
+    user: root
+    command: >
+      sh -c "
+        mkdir -p /mnt/shadow-morelli /mnt/venkalth-pickerin &&
+        chown -R 1000:1000 /mnt/shadow-morelli /mnt/venkalth-pickerin
+      "
+    volumes:
+      - ./data-shadow-morelli-qwen3-next-80b:/mnt/shadow-morelli
+      - ./data-venkalth-pickerin-qwen3-next-80b:/mnt/venkalth-pickerin
+
   picobot-shadow-morelli-qwen3-next-80b:
     build:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: picobot-shadow-morelli-qwen3-next-80b
+    depends_on:
+      init-perms:
+        condition: service_completed_successfully
     restart: unless-stopped
     labels:
       - "picobot.model=qwen/qwen3-next-80b-picobot"
@@ -34,6 +49,9 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: picobot-venkalth-pickerin-qwen3-next-80b
+    depends_on:
+      init-perms:
+        condition: service_completed_successfully
     restart: unless-stopped
     labels:
       - "picobot.model=qwen/qwen3-next-80b-picobot"
