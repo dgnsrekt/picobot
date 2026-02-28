@@ -82,6 +82,7 @@ func NewAgentLoop(b *chat.Hub, provider providers.LLMProvider, model string, max
 	mem := memory.NewMemoryStoreWithWorkspace(workspace, 100)
 	// register memory tool (needs store instance)
 	reg.Register(tools.NewWriteMemoryTool(mem))
+	reg.Register(tools.NewUpdateIdentityTool(workspace))
 
 	// register skill management tools (share the same os.Root)
 	skillMgr := tools.NewSkillManager(root)

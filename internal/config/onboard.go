@@ -242,6 +242,14 @@ Spawn a background subagent process.
 Schedule or manage cron jobs.
 `,
 
+		"identity.json": `{
+  "name": "picobot",
+  "description": "A helpful AI assistant.",
+  "url": "",
+  "skills": []
+}
+`,
+
 		"HEARTBEAT.md": `# Heartbeat
 
 This file is checked periodically (every 60 seconds). Add tasks here that should run on a schedule.
