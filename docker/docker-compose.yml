@@ -1,12 +1,12 @@
 services:
-  picobot-qwen:
+  picobot-shadow-morelli-qwen3-next-80b:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: picobot-qwen
+    container_name: picobot-shadow-morelli-qwen3-next-80b
     restart: unless-stopped
     labels:
-      - "picobot.model=qwen/qwen3-next-80b:shadow-morelli"
+      - "picobot.model=qwen/qwen3-next-80b-picobot"
       - "picobot.telegram=@fdd_shadow_morelli_bot"
     ports:
       - "8081:8080"
@@ -14,7 +14,7 @@ services:
       - HOME=/home/picobot
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-or-v1-REPLACE_ME}
       - OPENAI_API_BASE=${OPENAI_API_BASE:-https://openrouter.ai/api/v1}
-      - PICOBOT_MODEL=qwen/qwen3-next-80b:shadow-morelli
+      - PICOBOT_MODEL=qwen/qwen3-next-80b-picobot
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN_TWO:-}
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
@@ -24,7 +24,7 @@ services:
     group_add:
       - "970"
     volumes:
-      - ./data-qwen:/home/picobot/.picobot
+      - ./data-shadow-morelli-qwen3-next-80b:/home/picobot/.picobot
       - ${HOME}/.picobot:/mcp-config:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/host-ca-bundle.pem:ro
