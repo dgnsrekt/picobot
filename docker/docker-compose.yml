@@ -28,3 +28,33 @@ services:
       - ${HOME}/.picobot:/mcp-config:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/host-ca-bundle.pem:ro
+
+  picobot-venkalth-pickerin-qwen3-next-80b:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: picobot-venkalth-pickerin-qwen3-next-80b
+    restart: unless-stopped
+    labels:
+      - "picobot.model=qwen/qwen3-next-80b-picobot"
+      - "picobot.telegram=@fdd_venkalth_pickerin_bot"
+    ports:
+      - "8083:8080"
+    environment:
+      - HOME=/home/picobot
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-or-v1-REPLACE_ME}
+      - OPENAI_API_BASE=${OPENAI_API_BASE:-https://openrouter.ai/api/v1}
+      - PICOBOT_MODEL=qwen/qwen3-next-80b-picobot
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      - DISCORD_ALLOW_FROM=${DISCORD_ALLOW_FROM:-}
+      - SSL_CERT_FILE=/etc/ssl/host-ca-bundle.pem
+    user: "1000"
+    group_add:
+      - "970"
+    volumes:
+      - ./data-venkalth-pickerin-qwen3-next-80b:/home/picobot/.picobot
+      - ${HOME}/.picobot:/mcp-config:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/host-ca-bundle.pem:ro
