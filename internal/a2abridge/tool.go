@@ -8,18 +8,26 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/a2aproject/a2a-go/a2a"
 	"github.com/a2aproject/a2a-go/a2aclient"
 	"github.com/local/picobot/internal/agent/tools"
 )
 
+// descTTL is how long a cached agent card description is considered fresh.
+const descTTL = 5 * time.Minute
+
 // A2ATool wraps a single A2A agent and implements tools.Tool so it can be
 // registered in picobot's tool registry alongside built-in tools.
 type A2ATool struct {
-	agentName   string
-	client      *a2aclient.Client
-	description string // populated from agent card at startup
+	agentName     string
+	baseURL       string
+	client        *a2aclient.Client
+	descMu        sync.Mutex
+	description   string    // last successfully fetched description
+	descFetchedAt time.Time // when description was last fetched
 }
 
 // agentCard is a minimal subset of the A2A agent card JSON.
@@ -69,9 +77,21 @@ func (t *A2ATool) Name() string {
 	return fmt.Sprintf("a2a__%s__delegate", t.agentName)
 }
 
-// Description returns a human-readable description of the tool, populated from
-// the remote agent card if available, otherwise a generic fallback.
+// Description returns a human-readable description of the tool. The agent card
+// is re-fetched when the cached value is older than descTTL. On failure the
+// previous description is kept; the timestamp is still reset to avoid
+// hammering an unavailable peer.
 func (t *A2ATool) Description() string {
+	t.descMu.Lock()
+	defer t.descMu.Unlock()
+
+	if time.Since(t.descFetchedAt) > descTTL {
+		if fresh := fetchAgentDescription(t.baseURL); fresh != "" {
+			t.description = fresh
+		}
+		t.descFetchedAt = time.Now()
+	}
+
 	if t.description != "" {
 		return t.description
 	}
@@ -161,7 +181,13 @@ func LoadTools(cfg *A2AConfig) ([]tools.Tool, func(), error) {
 		}
 		clients = append(clients, client)
 		desc := fetchAgentDescription(agentCfg.URL)
-		allTools = append(allTools, &A2ATool{agentName: name, client: client, description: desc})
+		allTools = append(allTools, &A2ATool{
+			agentName:     name,
+			baseURL:       agentCfg.URL,
+			client:        client,
+			description:   desc,
+			descFetchedAt: time.Now(),
+		})
 		log.Printf("a2a: created delegation tool for agent %q at %s (%d skills)", name, agentCfg.URL, strings.Count(desc, "\n- "))
 	}
 

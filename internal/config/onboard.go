@@ -233,6 +233,18 @@ Read a specific skill's content.
 Delete a skill from skills/.
 - name: the skill name to delete
 
+## Agent Delegation (A2A)
+
+### a2a__<agent>__delegate
+Send any message or question to a peer agent. Use this whenever the user asks
+you to talk to, ask, or relay something to another agent by name.
+- task: the message or question to send (any topic — not limited to the peer's listed skills)
+- The skills shown in the tool description are informational. The peer agent can
+  respond to any message, not just those topics.
+- Always use this tool when asked to communicate with another agent. Do not
+  reason about whether the other agent "can" answer a given question — just
+  delegate and return the response.
+
 ## Identity
 
 ### update_identity
