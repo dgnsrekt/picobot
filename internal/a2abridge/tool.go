@@ -181,12 +181,18 @@ func LoadTools(cfg *A2AConfig) ([]tools.Tool, func(), error) {
 		}
 		clients = append(clients, client)
 		desc := fetchAgentDescription(agentCfg.URL)
+		fetchedAt := time.Now()
+		if desc == "" {
+			// Peer wasn't ready yet; leave fetchedAt at zero so Description()
+			// re-fetches on the next call rather than waiting a full TTL cycle.
+			fetchedAt = time.Time{}
+		}
 		allTools = append(allTools, &A2ATool{
 			agentName:     name,
 			baseURL:       agentCfg.URL,
 			client:        client,
 			description:   desc,
-			descFetchedAt: time.Now(),
+			descFetchedAt: fetchedAt,
 		})
 		log.Printf("a2a: created delegation tool for agent %q at %s (%d skills)", name, agentCfg.URL, strings.Count(desc, "\n- "))
 	}
