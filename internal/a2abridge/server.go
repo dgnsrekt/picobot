@@ -2,10 +2,13 @@ package a2abridge
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -15,23 +18,100 @@ import (
 	"github.com/local/picobot/internal/chat"
 )
 
+// identityFile is a minimal subset of workspace/identity.json used to populate
+// the A2A agent card. Kept local to avoid a cross-package dependency.
+type identityFile struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	URL         string `json:"url"`
+	Skills      []struct {
+		ID          string   `json:"id"`
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		Tags        []string `json:"tags"`
+	} `json:"skills"`
+}
+
 // A2AServer exposes picobot as an inbound A2A HTTP endpoint.
 // Incoming tasks are pushed into the agent hub and the response is collected
 // from the hub's outbound channel for the "a2a" subscriber.
 type A2AServer struct {
-	hub     *chat.Hub
-	pending sync.Map        // key: task ID string → chan string (buffered 1)
-	outCh   <-chan chat.Outbound
+	hub       *chat.Hub
+	workspace string
+	pending   sync.Map        // key: task ID string → chan string (buffered 1)
+	outCh     <-chan chat.Outbound
 }
 
 var _ a2asrv.AgentExecutor = (*A2AServer)(nil)
 
 // NewServer creates an A2AServer and subscribes to the "a2a" outbound channel.
+// workspace is the path to the agent's workspace directory (used to read
+// identity.json per request for the agent card endpoint).
 // This must be called BEFORE hub.StartRouter so the subscription is registered
 // in time.
-func NewServer(hub *chat.Hub) *A2AServer {
+func NewServer(hub *chat.Hub, workspace string) *A2AServer {
 	outCh := hub.Subscribe("a2a")
-	return &A2AServer{hub: hub, outCh: outCh}
+	return &A2AServer{hub: hub, workspace: workspace, outCh: outCh}
+}
+
+// readIdentity reads workspace/identity.json and returns its contents.
+// Returns a zero-value struct on any error so callers always get usable data.
+func (s *A2AServer) readIdentity() identityFile {
+	var id identityFile
+	raw, err := os.ReadFile(filepath.Join(s.workspace, "identity.json"))
+	if err != nil {
+		return id
+	}
+	_ = json.Unmarshal(raw, &id)
+	return id
+}
+
+// buildAgentCard constructs an a2a.AgentCard from identity.json, falling back
+// to generic defaults for any missing fields.
+func (s *A2AServer) buildAgentCard(port int) *a2a.AgentCard {
+	id := s.readIdentity()
+
+	name := id.Name
+	if name == "" {
+		name = "picobot"
+	}
+	desc := id.Description
+	if desc == "" {
+		desc = "Picobot A2A inbound agent"
+	}
+	cardURL := id.URL
+	if cardURL == "" {
+		cardURL = fmt.Sprintf("http://0.0.0.0:%d", port)
+	}
+
+	skills := make([]a2a.AgentSkill, 0, len(id.Skills)+1)
+	for _, s := range id.Skills {
+		skills = append(skills, a2a.AgentSkill{
+			ID:          s.ID,
+			Name:        s.Name,
+			Description: s.Description,
+			Tags:        s.Tags,
+		})
+	}
+	if len(skills) == 0 {
+		skills = []a2a.AgentSkill{{
+			ID:          "chat",
+			Name:        "Chat",
+			Description: "Send a message to the agent and receive a response.",
+			Tags:        []string{"chat"},
+		}}
+	}
+
+	return &a2a.AgentCard{
+		Name:               name,
+		Description:        desc,
+		URL:                cardURL,
+		PreferredTransport: a2a.TransportProtocolJSONRPC,
+		ProtocolVersion:    string(a2a.Version),
+		DefaultInputModes:  []string{"text/plain"},
+		DefaultOutputModes: []string{"text/plain"},
+		Skills:             skills,
+	}
 }
 
 // Execute implements a2asrv.AgentExecutor. It routes the incoming A2A task
@@ -147,28 +227,18 @@ func (s *A2AServer) routeOutbound(ctx context.Context) {
 func (s *A2AServer) Start(ctx context.Context, port int) error {
 	go s.routeOutbound(ctx)
 
-	agentCard := &a2a.AgentCard{
-		Name:               "picobot",
-		Description:        "Picobot A2A inbound agent",
-		URL:                fmt.Sprintf("http://0.0.0.0:%d", port),
-		PreferredTransport: a2a.TransportProtocolJSONRPC,
-		ProtocolVersion:    string(a2a.Version),
-		DefaultInputModes:  []string{"text/plain"},
-		DefaultOutputModes: []string{"text/plain"},
-		Skills: []a2a.AgentSkill{
-			{
-				ID:          "chat",
-				Name:        "Chat",
-				Description: "Send a message to the agent and receive a response.",
-				Tags:        []string{"chat"},
-			},
-		},
-	}
-
 	requestHandler := a2asrv.NewHandler(s)
 
+	// Serve the agent card dynamically so identity.json changes take effect
+	// without a restart.
+	cardHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		card := s.buildAgentCard(port)
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(card)
+	})
+
 	mux := http.NewServeMux()
-	mux.Handle(a2asrv.WellKnownAgentCardPath, a2asrv.NewStaticAgentCardHandler(agentCard))
+	mux.Handle(a2asrv.WellKnownAgentCardPath, cardHandler)
 	mux.Handle("/", a2asrv.NewJSONRPCHandler(requestHandler))
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))

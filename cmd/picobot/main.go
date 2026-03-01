@@ -248,7 +248,7 @@ func NewRootCmd() *cobra.Command {
 						if port == 0 {
 							port = 8080
 						}
-						a2aSrv := a2abridge.NewServer(hub) // Subscribe registered here, before StartRouter
+						a2aSrv := a2abridge.NewServer(hub, cfg.Agents.Defaults.Workspace) // Subscribe registered here, before StartRouter
 						go func() {
 							if err := a2aSrv.Start(ctx, port); err != nil {
 								log.Printf("a2a: server error: %v", err)
