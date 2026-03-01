@@ -233,6 +233,20 @@ Read a specific skill's content.
 Delete a skill from skills/.
 - name: the skill name to delete
 
+## Identity
+
+### update_identity
+Read or update this agent's identity (name, description, URL, skills). All fields are optional — omit all to read current identity.
+- name: agent display name
+- description: agent description
+- url: external A2A URL for this agent
+- skills: full replacement of the skills list (array of {id, name, description, tags})
+
+Examples:
+- Read: {}
+- Update name: {"name": "Shadow Morelli"}
+- Full update: {"name": "...", "description": "...", "skills": [{"id": "s1", "name": "web-search"}]}
+
 ## Background Tasks
 
 ### spawn
