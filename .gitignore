@@ -22,6 +22,7 @@ docker/.env
 
 # Runtime data
 picobot-data/
+docker/data-*/
 
 # OS files
 .DS_Store

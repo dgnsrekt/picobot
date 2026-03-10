@@ -1,29 +1,17 @@
 services:
-  picobot:
+  picobot-shadow-morelli-qwen3.5-9b:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: picobot
+    container_name: picobot-shadow-morelli-qwen3.5-9b
     restart: unless-stopped
     environment:
-      # Required: OpenAI-compatible API key (works with OpenRouter, OpenAI, etc.)
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-or-v1-REPLACE_ME}
-      # Optional: OpenAI-compatible API base URL
-      - OPENAI_API_BASE=${OPENAI_API_BASE:-https://openrouter.ai/api/v1}
-      # Required: The LLM model to use
-      - PICOBOT_MODEL=${PICOBOT_MODEL:-google/gemini-2.5-flash}
-      # Optional: Maximum tokens for LLM responses (default: 8192)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-lm-studio}
+      - OPENAI_API_BASE=${OPENAI_API_BASE:-http://10.10.0.112:1234/v1}
+      - PICOBOT_MODEL=${PICOBOT_MODEL:-qwen/qwen3.5-9b}
       - PICOBOT_MAX_TOKENS=${PICOBOT_MAX_TOKENS:-8192}
-      # Optional: Maximum tool iterations per request (default: 100)
       - PICOBOT_MAX_TOOL_ITERATIONS=${PICOBOT_MAX_TOOL_ITERATIONS:-100}
-      # Optional: Telegram bot token from @BotFather
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
-      # Optional: Comma-separated Telegram user IDs allowed to chat
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN_TWO:-}
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
-      # Optional: Discord bot token from Developer Portal
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
-      # Optional: Comma-separated Discord user IDs allowed to chat
-      - DISCORD_ALLOW_FROM=${DISCORD_ALLOW_FROM:-}
     volumes:
-      # Persist config, workspace, memory, skills, and WhatsApp session DB
-      - ./picobot-data:/home/picobot/.picobot
+      - ./data-shadow-morelli-qwen3.5-9b:/home/picobot/.picobot
