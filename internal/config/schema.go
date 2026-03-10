@@ -20,6 +20,7 @@ type AgentDefaults struct {
 	HeartbeatEnabled   *bool   `json:"heartbeatEnabled,omitempty"`
 	HeartbeatIntervalS int     `json:"heartbeatIntervalS"`
 	RequestTimeoutS    int     `json:"requestTimeoutS"`
+	RegistryURL        string  `json:"registryURL,omitempty"`
 }
 
 type ChannelsConfig struct {

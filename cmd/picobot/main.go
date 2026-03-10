@@ -23,6 +23,7 @@ import (
 	"github.com/local/picobot/internal/config"
 	"github.com/local/picobot/internal/cron"
 	"github.com/local/picobot/internal/heartbeat"
+	"github.com/local/picobot/internal/registry"
 	"github.com/local/picobot/internal/providers"
 )
 
@@ -199,6 +200,51 @@ func NewRootCmd() *cobra.Command {
 					hbInterval = 60 * time.Second
 				}
 				heartbeat.StartHeartbeat(ctx, cfg.Agents.Defaults.Workspace, hbInterval, hub)
+			}
+
+			// register with agent registry if configured
+			if cfg.Agents.Defaults.RegistryURL != "" {
+				ws := cfg.Agents.Defaults.Workspace
+				if ws == "" {
+					ws = "~/.picobot/workspace"
+				}
+				if strings.HasPrefix(ws, "~/") {
+					home, _ := os.UserHomeDir()
+					ws = filepath.Join(home, ws[2:])
+				}
+				identity, err := registry.ReadIdentity(ws)
+				if err != nil {
+					log.Printf("registry: no identity.json, skipping: %v", err)
+				} else {
+					agentID := identity.ID
+					if agentID == "" {
+						agentID = identity.Name
+					}
+					home, _ := os.UserHomeDir()
+					tokenDir := filepath.Join(home, ".picobot")
+					rc := registry.NewClient(cfg.Agents.Defaults.RegistryURL, agentID, tokenDir)
+
+					meta := map[string]string{
+						"runtime": "go",
+						"model":   model,
+					}
+					if err := rc.Register(ctx, identity, meta); err != nil {
+						log.Printf("registry: registration failed: %v", err)
+					} else {
+						log.Printf("registry: registered as %q", agentID)
+						rc.StartHeartbeat(ctx, 30*time.Second)
+						// deregister on shutdown
+						defer func() {
+							dctx, dcancel := context.WithTimeout(context.Background(), 5*time.Second)
+							defer dcancel()
+							if err := rc.Deregister(dctx); err != nil {
+								log.Printf("registry: deregister failed: %v", err)
+							} else {
+								log.Printf("registry: deregistered %q", agentID)
+							}
+						}()
+					}
+				}
 			}
 
 			// start telegram if enabled

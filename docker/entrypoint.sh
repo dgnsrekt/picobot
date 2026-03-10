@@ -72,5 +72,11 @@ if [ -n "${PICOBOT_MAX_TOOL_ITERATIONS}" ]; then
   jq --argjson iter "${PICOBOT_MAX_TOOL_ITERATIONS}" '.agents.defaults.maxToolIterations = $iter' "${CONFIG}" > "$TMP" && mv "$TMP" "${CONFIG}"
 fi
 
+if [ -n "${AGENT_REGISTRY_URL}" ]; then
+  echo "Applying AGENT_REGISTRY_URL from environment..."
+  TMP=$(mktemp)
+  jq --arg url "${AGENT_REGISTRY_URL}" '.agents.defaults.registryURL = $url' "${CONFIG}" > "$TMP" && mv "$TMP" "${CONFIG}"
+fi
+
 echo "Starting picobot $@..."
 exec picobot "$@"

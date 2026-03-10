@@ -31,6 +31,7 @@ services:
       - PICOBOT_MAX_TOOL_ITERATIONS=${PICOBOT_MAX_TOOL_ITERATIONS:-100}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN_TWO:-}
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
+      - AGENT_REGISTRY_URL=${AGENT_REGISTRY_URL:-}
       - SSL_CERT_FILE=/etc/ssl/host-ca-bundle.pem
     user: "1000"
     volumes:
