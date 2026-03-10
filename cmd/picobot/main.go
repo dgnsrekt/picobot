@@ -192,12 +192,14 @@ func NewRootCmd() *cobra.Command {
 			// start cron scheduler
 			go scheduler.Start(ctx.Done())
 
-			// start heartbeat
-			hbInterval := time.Duration(cfg.Agents.Defaults.HeartbeatIntervalS) * time.Second
-			if hbInterval <= 0 {
-				hbInterval = 60 * time.Second
+			// start heartbeat (opt-in via config; defaults to enabled if unset)
+			if cfg.Agents.Defaults.HeartbeatEnabled == nil || *cfg.Agents.Defaults.HeartbeatEnabled {
+				hbInterval := time.Duration(cfg.Agents.Defaults.HeartbeatIntervalS) * time.Second
+				if hbInterval <= 0 {
+					hbInterval = 60 * time.Second
+				}
+				heartbeat.StartHeartbeat(ctx, cfg.Agents.Defaults.Workspace, hbInterval, hub)
 			}
-			heartbeat.StartHeartbeat(ctx, cfg.Agents.Defaults.Workspace, hbInterval, hub)
 
 			// start telegram if enabled
 			if cfg.Channels.Telegram.Enabled {
