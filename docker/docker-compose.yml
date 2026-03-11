@@ -4,11 +4,12 @@ services:
     user: root
     command: >
       sh -c "
-        mkdir -p /mnt/shadow-morelli &&
-        chown -R 1000:1000 /mnt/shadow-morelli
+        mkdir -p /mnt/shadow-morelli /mnt/venkalth-pickerin &&
+        chown -R 1000:1000 /mnt/shadow-morelli /mnt/venkalth-pickerin
       "
     volumes:
       - ./data-shadow-morelli-qwen3.5-9b:/mnt/shadow-morelli
+      - ./data-venkalth-pickerin-qwen3.5-9b:/mnt/venkalth-pickerin
 
   picobot-shadow-morelli-qwen3.5-9b:
     build:
@@ -36,4 +37,32 @@ services:
     user: "1000"
     volumes:
       - ./data-shadow-morelli-qwen3.5-9b:/home/picobot/.picobot
+      - /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/host-ca-bundle.pem:ro
+
+  picobot-venkalth-pickerin-qwen3.5-9b:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: picobot-venkalth-pickerin-qwen3.5-9b
+    depends_on:
+      init-perms:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    labels:
+      - "picobot.model=qwen/qwen3.5-9b"
+      - "picobot.telegram=@fdd_venkalth_pickerin_bot"
+    environment:
+      - HOME=/home/picobot
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-lm-studio}
+      - OPENAI_API_BASE=${OPENAI_API_BASE:-http://10.10.0.112:1234/v1}
+      - PICOBOT_MODEL=${PICOBOT_MODEL:-qwen/qwen3.5-9b}
+      - PICOBOT_MAX_TOKENS=${PICOBOT_MAX_TOKENS:-8192}
+      - PICOBOT_MAX_TOOL_ITERATIONS=${PICOBOT_MAX_TOOL_ITERATIONS:-100}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
+      - AGENT_REGISTRY_URL=${AGENT_REGISTRY_URL:-}
+      - SSL_CERT_FILE=/etc/ssl/host-ca-bundle.pem
+    user: "1000"
+    volumes:
+      - ./data-venkalth-pickerin-qwen3.5-9b:/home/picobot/.picobot
       - /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/host-ca-bundle.pem:ro
