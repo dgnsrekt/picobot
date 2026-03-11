@@ -5,48 +5,49 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/a2aproject/a2a-go/a2a"
 )
 
 // Client talks to the a2agent-registry HTTP API.
 type Client struct {
 	baseURL   string
-	agentID   string
+	agentURL  string
 	token     string
 	tokenPath string
 	http      *http.Client
 }
 
-// NewClient creates a registry client. tokenDir is the directory where the
-// registration token is persisted (typically ~/.picobot/).
-func NewClient(baseURL, agentID, tokenDir string) *Client {
+// NewClient creates a registry client. agentURL is the agent's reachable URL
+// (used as the registry key). tokenDir is the directory where the registration
+// token is persisted (typically ~/.picobot/).
+func NewClient(baseURL, agentURL, tokenDir string) *Client {
 	return &Client{
 		baseURL:   baseURL,
-		agentID:   agentID,
+		agentURL:  agentURL,
 		tokenPath: filepath.Join(tokenDir, "registry-token"),
 		http:      &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
-// Register sends the agent's identity to the registry. On first registration
-// a token is returned and persisted; on subsequent calls the saved token is
-// sent so the registry recognises the agent.
-func (c *Client) Register(ctx context.Context, id Identity, metadata map[string]string) error {
+// Register sends the agent card to the registry. On first registration a token
+// is returned and persisted; on subsequent calls the saved token is sent so the
+// registry recognises the agent.
+func (c *Client) Register(ctx context.Context, card *a2a.AgentCard, metadata map[string]string) error {
 	c.loadToken()
 
 	body := registerRequest{
-		ID:          c.agentID,
-		Name:        id.Name,
-		Description: id.Description,
-		URL:         id.URL,
-		CardURL:     id.CardURL,
-		Skills:      id.Skills,
-		Metadata:    metadata,
-		Token:       c.token,
+		URL:      c.agentURL,
+		Card:     card,
+		Metadata: metadata,
+		Token:    c.token,
 	}
 
 	data, err := json.Marshal(body)
@@ -67,7 +68,8 @@ func (c *Client) Register(ctx context.Context, id Identity, metadata map[string]
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("registry: register returned HTTP %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("registry: register returned HTTP %d: %s", resp.StatusCode, body)
 	}
 
 	var result registerResponse
@@ -86,7 +88,7 @@ func (c *Client) Register(ctx context.Context, id Identity, metadata map[string]
 // Heartbeat sends a keep-alive to the registry.
 func (c *Client) Heartbeat(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, "POST",
-		fmt.Sprintf("%s/api/agents/%s/heartbeat", c.baseURL, c.agentID),
+		fmt.Sprintf("%s/api/agents/%s/heartbeat", c.baseURL, url.PathEscape(c.agentURL)),
 		http.NoBody)
 	if err != nil {
 		return fmt.Errorf("registry: heartbeat request: %w", err)
@@ -108,7 +110,7 @@ func (c *Client) Heartbeat(ctx context.Context) error {
 // Deregister removes the agent from the registry.
 func (c *Client) Deregister(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, "DELETE",
-		fmt.Sprintf("%s/api/agents/%s", c.baseURL, c.agentID),
+		fmt.Sprintf("%s/api/agents/%s", c.baseURL, url.PathEscape(c.agentURL)),
 		http.NoBody)
 	if err != nil {
 		return fmt.Errorf("registry: deregister request: %w", err)
@@ -147,17 +149,50 @@ func (c *Client) StartHeartbeat(ctx context.Context, interval time.Duration) {
 	log.Printf("registry: heartbeat started (every %s)", interval)
 }
 
-// ReadIdentity loads identity.json from the given workspace directory.
-func ReadIdentity(workspace string) (Identity, error) {
+// identityJSON mirrors the workspace/identity.json format used by picobot agents.
+type identityJSON struct {
+	ID          string `json:"id,omitempty"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	URL         string `json:"url,omitempty"`
+	Skills      []struct {
+		ID          string   `json:"id"`
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		Tags        []string `json:"tags,omitempty"`
+	} `json:"skills,omitempty"`
+}
+
+// ReadIdentity loads identity.json from the given workspace directory and
+// returns it as an a2a.AgentCard.
+func ReadIdentity(workspace string) (*a2a.AgentCard, error) {
 	data, err := os.ReadFile(filepath.Join(workspace, "identity.json"))
 	if err != nil {
-		return Identity{}, err
+		return nil, err
 	}
-	var id Identity
+	var id identityJSON
 	if err := json.Unmarshal(data, &id); err != nil {
-		return Identity{}, fmt.Errorf("registry: parse identity.json: %w", err)
+		return nil, fmt.Errorf("registry: parse identity.json: %w", err)
 	}
-	return id, nil
+
+	card := &a2a.AgentCard{
+		Name:            id.Name,
+		Description:     id.Description,
+		URL:             id.URL,
+		Version:         "1.0.0",
+		ProtocolVersion: "0.3.0",
+	}
+
+	for _, s := range id.Skills {
+		card.Skills = append(card.Skills, a2a.AgentSkill{
+			ID:          s.ID,
+			Name:        s.Name,
+			Description: s.Description,
+			Tags:        s.Tags,
+		})
+	}
+
+	return card, nil
 }
 
 func (c *Client) loadToken() {

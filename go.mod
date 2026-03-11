@@ -3,6 +3,7 @@ module github.com/local/picobot
 go 1.26
 
 require (
+	github.com/a2aproject/a2a-go v0.3.7
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/mdp/qrterminal/v3 v3.2.1
 	github.com/spf13/cobra v1.7.0

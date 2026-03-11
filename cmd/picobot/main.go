@@ -212,26 +212,22 @@ func NewRootCmd() *cobra.Command {
 					home, _ := os.UserHomeDir()
 					ws = filepath.Join(home, ws[2:])
 				}
-				identity, err := registry.ReadIdentity(ws)
+				card, err := registry.ReadIdentity(ws)
 				if err != nil {
 					log.Printf("registry: no identity.json, skipping: %v", err)
 				} else {
-					agentID := identity.ID
-					if agentID == "" {
-						agentID = identity.Name
-					}
 					home, _ := os.UserHomeDir()
 					tokenDir := filepath.Join(home, ".picobot")
-					rc := registry.NewClient(cfg.Agents.Defaults.RegistryURL, agentID, tokenDir)
+					rc := registry.NewClient(cfg.Agents.Defaults.RegistryURL, card.URL, tokenDir)
 
 					meta := map[string]string{
 						"runtime": "go",
 						"model":   model,
 					}
-					if err := rc.Register(ctx, identity, meta); err != nil {
+					if err := rc.Register(ctx, card, meta); err != nil {
 						log.Printf("registry: registration failed: %v", err)
 					} else {
-						log.Printf("registry: registered as %q", agentID)
+						log.Printf("registry: registered as %q", card.URL)
 						rc.StartHeartbeat(ctx, 30*time.Second)
 						// deregister on shutdown
 						defer func() {
@@ -240,7 +236,7 @@ func NewRootCmd() *cobra.Command {
 							if err := rc.Deregister(dctx); err != nil {
 								log.Printf("registry: deregister failed: %v", err)
 							} else {
-								log.Printf("registry: deregistered %q", agentID)
+								log.Printf("registry: deregistered %q", card.URL)
 							}
 						}()
 					}
