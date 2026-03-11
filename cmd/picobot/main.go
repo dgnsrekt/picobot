@@ -19,6 +19,7 @@ import (
 	"net/http"
 
 	"github.com/a2aproject/a2a-go/a2asrv"
+	picobota2a "github.com/local/picobot/internal/a2a"
 	"github.com/local/picobot/internal/agent"
 	"github.com/local/picobot/internal/agent/memory"
 	"github.com/local/picobot/internal/channels"
@@ -219,18 +220,21 @@ func NewRootCmd() *cobra.Command {
 				log.Printf("identity: no identity.json found: %v", cardErr)
 			}
 
-			// start agent card HTTP server if port configured
+			// start A2A server (JSON-RPC handler + agent card) if port configured
 			if cfg.Agents.Defaults.A2APort > 0 && card != nil {
+				executor := picobota2a.NewPicobotExecutor(ag, 120*time.Second)
+				handler := a2asrv.NewHandler(executor)
 				cardMux := http.NewServeMux()
+				cardMux.Handle("/", a2asrv.NewJSONRPCHandler(handler))
 				cardMux.Handle(a2asrv.WellKnownAgentCardPath, a2asrv.NewStaticAgentCardHandler(card))
 				cardSrv := &http.Server{
 					Addr:    fmt.Sprintf(":%d", cfg.Agents.Defaults.A2APort),
 					Handler: cardMux,
 				}
 				go func() {
-					log.Printf("a2a: serving agent card on :%d%s", cfg.Agents.Defaults.A2APort, a2asrv.WellKnownAgentCardPath)
+					log.Printf("a2a: serving JSON-RPC + agent card on :%d", cfg.Agents.Defaults.A2APort)
 					if err := cardSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-						log.Printf("a2a: card server error: %v", err)
+						log.Printf("a2a: server error: %v", err)
 					}
 				}()
 				defer func() {

@@ -112,9 +112,10 @@ func NewAgentLoop(b *chat.Hub, provider providers.LLMProvider, model string, max
 	reg.Register(tools.NewReadSkillTool(skillMgr))
 	reg.Register(tools.NewDeleteSkillTool(skillMgr))
 
-	// register agent discovery tool if registry is configured
+	// register agent discovery and delegation tools if registry is configured
 	if registryURL != "" {
 		reg.Register(tools.NewDiscoverAgentsTool(registryURL))
+		reg.Register(tools.NewDelegateTaskTool())
 	}
 
 	return &AgentLoop{hub: b, provider: provider, tools: reg, sessions: sm, context: ctx, memory: mem, model: model, maxIterations: maxIterations}

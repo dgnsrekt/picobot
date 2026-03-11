@@ -176,11 +176,14 @@ func ReadIdentity(workspace string) (*a2a.AgentCard, error) {
 	}
 
 	card := &a2a.AgentCard{
-		Name:            id.Name,
-		Description:     id.Description,
-		URL:             id.URL,
-		Version:         "1.0.0",
-		ProtocolVersion: "0.3.0",
+		Name:               id.Name,
+		Description:        id.Description,
+		URL:                id.URL,
+		Version:            "1.0.0",
+		ProtocolVersion:    "0.3.0",
+		PreferredTransport: a2a.TransportProtocolJSONRPC,
+		DefaultInputModes:  []string{"text/plain"},
+		DefaultOutputModes: []string{"text/plain"},
 	}
 
 	for _, s := range id.Skills {
