@@ -21,6 +21,7 @@ type AgentDefaults struct {
 	HeartbeatIntervalS int     `json:"heartbeatIntervalS"`
 	RequestTimeoutS    int     `json:"requestTimeoutS"`
 	RegistryURL        string  `json:"registryURL,omitempty"`
+	A2APort            int     `json:"a2aPort,omitempty"`
 }
 
 type ChannelsConfig struct {

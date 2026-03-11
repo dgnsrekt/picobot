@@ -78,5 +78,11 @@ if [ -n "${AGENT_REGISTRY_URL}" ]; then
   jq --arg url "${AGENT_REGISTRY_URL}" '.agents.defaults.registryURL = $url' "${CONFIG}" > "$TMP" && mv "$TMP" "${CONFIG}"
 fi
 
+if [ -n "${A2A_PORT}" ]; then
+  echo "Applying A2A_PORT from environment..."
+  TMP=$(mktemp)
+  jq --argjson port "${A2A_PORT}" '.agents.defaults.a2aPort = $port' "${CONFIG}" > "$TMP" && mv "$TMP" "${CONFIG}"
+fi
+
 echo "Starting picobot $@..."
 exec picobot "$@"

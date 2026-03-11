@@ -16,6 +16,9 @@ import (
 
 	"log"
 
+	"net/http"
+
+	"github.com/a2aproject/a2a-go/a2asrv"
 	"github.com/local/picobot/internal/agent"
 	"github.com/local/picobot/internal/agent/memory"
 	"github.com/local/picobot/internal/channels"
@@ -136,7 +139,7 @@ func NewRootCmd() *cobra.Command {
 			if maxIter <= 0 {
 				maxIter = 100
 			}
-			ag := agent.NewAgentLoop(hub, provider, model, maxIter, cfg.Agents.Defaults.Workspace, nil)
+			ag := agent.NewAgentLoop(hub, provider, model, maxIter, cfg.Agents.Defaults.Workspace, nil, "")
 
 			resp, err := ag.ProcessDirect(msg, 60*time.Second)
 			if err != nil {
@@ -183,7 +186,7 @@ func NewRootCmd() *cobra.Command {
 			if maxIter <= 0 {
 				maxIter = 100
 			}
-			ag := agent.NewAgentLoop(hub, provider, model, maxIter, cfg.Agents.Defaults.Workspace, scheduler)
+			ag := agent.NewAgentLoop(hub, provider, model, maxIter, cfg.Agents.Defaults.Workspace, scheduler, cfg.Agents.Defaults.RegistryURL)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
@@ -202,44 +205,66 @@ func NewRootCmd() *cobra.Command {
 				heartbeat.StartHeartbeat(ctx, cfg.Agents.Defaults.Workspace, hbInterval, hub)
 			}
 
-			// register with agent registry if configured
-			if cfg.Agents.Defaults.RegistryURL != "" {
-				ws := cfg.Agents.Defaults.Workspace
-				if ws == "" {
-					ws = "~/.picobot/workspace"
-				}
-				if strings.HasPrefix(ws, "~/") {
-					home, _ := os.UserHomeDir()
-					ws = filepath.Join(home, ws[2:])
-				}
-				card, err := registry.ReadIdentity(ws)
-				if err != nil {
-					log.Printf("registry: no identity.json, skipping: %v", err)
-				} else {
-					home, _ := os.UserHomeDir()
-					tokenDir := filepath.Join(home, ".picobot")
-					rc := registry.NewClient(cfg.Agents.Defaults.RegistryURL, card.URL, tokenDir)
+			// load agent identity card (shared between HTTP server and registry)
+			ws := cfg.Agents.Defaults.Workspace
+			if ws == "" {
+				ws = "~/.picobot/workspace"
+			}
+			if strings.HasPrefix(ws, "~/") {
+				home, _ := os.UserHomeDir()
+				ws = filepath.Join(home, ws[2:])
+			}
+			card, cardErr := registry.ReadIdentity(ws)
+			if cardErr != nil {
+				log.Printf("identity: no identity.json found: %v", cardErr)
+			}
 
-					meta := map[string]string{
-						"runtime": "go",
-						"model":   model,
+			// start agent card HTTP server if port configured
+			if cfg.Agents.Defaults.A2APort > 0 && card != nil {
+				cardMux := http.NewServeMux()
+				cardMux.Handle(a2asrv.WellKnownAgentCardPath, a2asrv.NewStaticAgentCardHandler(card))
+				cardSrv := &http.Server{
+					Addr:    fmt.Sprintf(":%d", cfg.Agents.Defaults.A2APort),
+					Handler: cardMux,
+				}
+				go func() {
+					log.Printf("a2a: serving agent card on :%d%s", cfg.Agents.Defaults.A2APort, a2asrv.WellKnownAgentCardPath)
+					if err := cardSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+						log.Printf("a2a: card server error: %v", err)
 					}
-					if err := rc.Register(ctx, card, meta); err != nil {
-						log.Printf("registry: registration failed: %v", err)
-					} else {
-						log.Printf("registry: registered as %q", card.URL)
-						rc.StartHeartbeat(ctx, 30*time.Second)
-						// deregister on shutdown
-						defer func() {
-							dctx, dcancel := context.WithTimeout(context.Background(), 5*time.Second)
-							defer dcancel()
-							if err := rc.Deregister(dctx); err != nil {
-								log.Printf("registry: deregister failed: %v", err)
-							} else {
-								log.Printf("registry: deregistered %q", card.URL)
-							}
-						}()
-					}
+				}()
+				defer func() {
+					sctx, scancel := context.WithTimeout(context.Background(), 5*time.Second)
+					defer scancel()
+					cardSrv.Shutdown(sctx)
+				}()
+			}
+
+			// register with agent registry if configured
+			if cfg.Agents.Defaults.RegistryURL != "" && card != nil {
+				home, _ := os.UserHomeDir()
+				tokenDir := filepath.Join(home, ".picobot")
+				rc := registry.NewClient(cfg.Agents.Defaults.RegistryURL, card.URL, tokenDir)
+
+				meta := map[string]string{
+					"runtime": "go",
+					"model":   model,
+				}
+
+				if err := rc.Register(ctx, card, meta); err != nil {
+					log.Printf("registry: registration failed: %v", err)
+				} else {
+					log.Printf("registry: registered as %q", card.URL)
+					rc.StartHeartbeat(ctx, 30*time.Second)
+					defer func() {
+						dctx, dcancel := context.WithTimeout(context.Background(), 5*time.Second)
+						defer dcancel()
+						if err := rc.Deregister(dctx); err != nil {
+							log.Printf("registry: deregister failed: %v", err)
+						} else {
+							log.Printf("registry: deregistered %q", card.URL)
+						}
+					}()
 				}
 			}
 
