@@ -220,6 +220,20 @@ func NewRootCmd() *cobra.Command {
 				log.Printf("identity: no identity.json found: %v", cardErr)
 			}
 
+			// Tell discover/delegate tools about our own URL so they never target self.
+			if card != nil {
+				if dt := ag.GetTool("discover_agents"); dt != nil {
+					if s, ok := dt.(interface{ SetSelfURL(string) }); ok {
+						s.SetSelfURL(card.URL)
+					}
+				}
+				if dt := ag.GetTool("delegate_task"); dt != nil {
+					if s, ok := dt.(interface{ SetSelfURL(string) }); ok {
+						s.SetSelfURL(card.URL)
+					}
+				}
+			}
+
 			// start A2A server (JSON-RPC handler + agent card) if port configured
 			if cfg.Agents.Defaults.A2APort > 0 && card != nil {
 				executor := picobota2a.NewPicobotExecutor(ag, 120*time.Second)

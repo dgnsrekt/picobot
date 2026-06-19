@@ -14,8 +14,11 @@ import (
 // name, or tag. Returns agent names, descriptions, skills, URLs, and status.
 type DiscoverAgentsTool struct {
 	registryURL string
+	selfURL     string
 	client      *http.Client
 }
+
+func (t *DiscoverAgentsTool) SetSelfURL(url string) { t.selfURL = url }
 
 func NewDiscoverAgentsTool(registryURL string) *DiscoverAgentsTool {
 	return &DiscoverAgentsTool{
@@ -101,6 +104,17 @@ func (t *DiscoverAgentsTool) Execute(ctx context.Context, args map[string]interf
 	var entries []discoveryEntry
 	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
 		return "", fmt.Errorf("discover_agents: decode: %w", err)
+	}
+
+	// Filter out self so the agent never sees itself as a delegation target.
+	if t.selfURL != "" {
+		filtered := entries[:0]
+		for _, e := range entries {
+			if e.Card.URL != t.selfURL {
+				filtered = append(filtered, e)
+			}
+		}
+		entries = filtered
 	}
 
 	return formatDiscoveryResults(entries), nil

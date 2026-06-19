@@ -121,6 +121,9 @@ func NewAgentLoop(b *chat.Hub, provider providers.LLMProvider, model string, max
 	return &AgentLoop{hub: b, provider: provider, tools: reg, sessions: sm, context: ctx, memory: mem, model: model, maxIterations: maxIterations}
 }
 
+// GetTool returns a registered tool by name (or nil if not found).
+func (a *AgentLoop) GetTool(name string) tools.Tool { return a.tools.Get(name) }
+
 // Run starts processing inbound messages. This is a blocking call until context is canceled.
 func (a *AgentLoop) Run(ctx context.Context) {
 	a.running = true

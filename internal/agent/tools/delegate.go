@@ -14,8 +14,11 @@ import (
 
 // DelegateTaskTool sends a task to another A2A agent and returns the response.
 type DelegateTaskTool struct {
+	selfURL  string
 	resolver *agentcard.Resolver
 }
+
+func (t *DelegateTaskTool) SetSelfURL(url string) { t.selfURL = url }
 
 func NewDelegateTaskTool() *DelegateTaskTool {
 	return &DelegateTaskTool{
@@ -53,6 +56,9 @@ func (t *DelegateTaskTool) Execute(ctx context.Context, args map[string]interfac
 	}
 	if message == "" {
 		return "", fmt.Errorf("delegate_task: message is required")
+	}
+	if t.selfURL != "" && agentURL == t.selfURL {
+		return "", fmt.Errorf("cannot delegate to self — choose a different agent")
 	}
 
 	// Use a generous timeout for the full round-trip (card fetch + task execution)
